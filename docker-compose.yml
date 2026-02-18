@@ -1,0 +1,31 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./www:/var/www/html
+    depends_on:
+      - php
+
+  php:
+    build: ./docker/php
+    volumes:
+      - ./www:/var/www/html
+    working_dir: /var/www/html
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: short_urls
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: dev
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql-data:
