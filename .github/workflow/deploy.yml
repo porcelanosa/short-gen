@@ -18,20 +18,23 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy via SSH
+      - name: Add server to known_hosts
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd /var/www/your-project
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-            echo "Pulling latest changes..."
-            git pull origin main
+      - name: Deploy www folder via rsync
+        run: |
+          rsync -avz --delete \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="config/db.php" \
+            ./www/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/porcelanosa/data/www/short-gen.sa6.ru/
 
-            echo "Running composer update..."
-            composer update --no-interaction --prefer-dist --optimize-autoloader
-
-            echo "Clearing cache..."
-            php artisan config:clear || true
-            php artisan cache:clear || true
-
-            echo "Done!"
-          EOF
+      - name: Run composer and migrations
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd /var/www/porcelanosa/data/www/short-gen.sa6.ru &&
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader &&
+            php yii migrate --interactive=0
+          "
